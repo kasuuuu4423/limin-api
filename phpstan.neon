@@ -4,6 +4,6 @@ includes:
 parameters:
     paths:
         - app
+        - packages
     level: 8
     ignoreErrors: []
-
