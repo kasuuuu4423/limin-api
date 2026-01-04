@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Infrastructure\Eloquent;
 
 use App\Infrastructure\Models\Item as ItemModel;
+use Carbon\Carbon;
 use Domain\Limin\Entity\Item;
+use Domain\Limin\Entity\Session;
 use Domain\Limin\Repository\ItemRepositoryInterface;
 use Domain\Limin\ValueObject\Availability;
 use Domain\Limin\ValueObject\ItemState;
 use Domain\Limin\ValueObject\ItemType;
 use Domain\Limin\ValueObject\NextAction;
+use Illuminate\Database\Eloquent\Builder;
 
 final class EloquentItemRepository implements ItemRepositoryInterface
 {
@@ -39,11 +42,11 @@ final class EloquentItemRepository implements ItemRepositoryInterface
         $model->state = $item->state->value;
         $model->availability = $item->availability->value;
         $model->next_action = $item->nextAction->value;
-        $model->due_at = $item->dueAt;
+        $model->due_at = $item->dueAt !== null ? Carbon::instance($item->dueAt) : null;
         $model->timebox = $item->timebox;
         $model->meta = $item->meta;
-        $model->last_presented_at = $item->lastPresentedAt;
-        $model->done_at = $item->doneAt;
+        $model->last_presented_at = $item->lastPresentedAt !== null ? Carbon::instance($item->lastPresentedAt) : null;
+        $model->done_at = $item->doneAt !== null ? Carbon::instance($item->doneAt) : null;
 
         $model->save();
     }
@@ -51,6 +54,68 @@ final class EloquentItemRepository implements ItemRepositoryInterface
     public function delete(string $id): void
     {
         ItemModel::where('id', $id)->delete();
+    }
+
+    public function findNextCandidate(int $userId, Session $session): ?Item
+    {
+        $model = $this->baseCandidateQuery($userId, $session)
+            ->orderBy('created_at', 'asc')
+            ->first();
+
+        if ($model === null) {
+            return null;
+        }
+
+        return $this->toEntity($model);
+    }
+
+    public function findDeadlineCandidate(int $userId, Session $session, int $withinHours): ?Item
+    {
+        $threshold = new \DateTimeImmutable("+{$withinHours} hours");
+
+        $model = $this->baseCandidateQuery($userId, $session)
+            ->whereNotNull('due_at')
+            ->where('due_at', '<=', $threshold)
+            ->orderBy('due_at', 'asc')
+            ->first();
+
+        if ($model === null) {
+            return null;
+        }
+
+        return $this->toEntity($model);
+    }
+
+    public function updateLastPresentedAt(string $itemId, \DateTimeImmutable $presentedAt): void
+    {
+        ItemModel::where('id', $itemId)
+            ->update(['last_presented_at' => $presentedAt]);
+    }
+
+    /**
+     * 通常レーン・締切割り込み共通の選定条件クエリ
+     *
+     * @return Builder<ItemModel>
+     */
+    private function baseCandidateQuery(int $userId, Session $session): Builder
+    {
+        return ItemModel::query()
+            ->where('user_id', $userId)
+            ->where('availability', Availability::NOW->value)
+            ->where('state', ItemState::DO->value)
+            ->whereNotNull('next_action')
+            ->where('next_action', '!=', '')
+            ->whereNull('done_at')
+            ->where(function (Builder $query) use ($session) {
+                // セッション開始後に先送りされたItemを除外
+                // 条件: NOT (last_presented_at >= session.started_at AND availability != NOW)
+                // availabilityがNOWの条件は上で既に指定しているので、
+                // ここでは「セッション開始後に提示されて、今はNOWでない」ケースを除外
+                // しかし、availability = NOW は上で保証されているため、
+                // 実際には last_presented_at がセッション開始前 OR null のものを含める
+                $query->whereNull('last_presented_at')
+                    ->orWhere('last_presented_at', '<', $session->startedAt);
+            });
     }
 
     private function toEntity(ItemModel $model): Item

@@ -40,6 +40,7 @@ final class EloquentSessionRepository implements SessionRepositoryInterface
         LiminSession::updateOrCreate(
             ['id' => $session->id],
             [
+                'id' => $session->id,
                 'user_id' => $session->userId,
                 'device_id' => $session->deviceId,
                 'started_at' => $session->startedAt,
@@ -50,6 +51,48 @@ final class EloquentSessionRepository implements SessionRepositoryInterface
                 'interrupt_accepted_at' => $session->interruptAcceptedAt,
             ]
         );
+    }
+
+    /**
+     * @return array<Session>
+     */
+    public function findActiveSessionsStartedBefore(\DateTimeImmutable $before): array
+    {
+        $models = LiminSession::whereNull('stopped_at')
+            ->where('started_at', '<', $before)
+            ->get();
+
+        return $models->map(fn (LiminSession $model) => $this->toEntity($model))->all();
+    }
+
+    public function stop(string $sessionId, \DateTimeImmutable $stoppedAt): void
+    {
+        LiminSession::where('id', $sessionId)
+            ->update(['stopped_at' => $stoppedAt]);
+    }
+
+    public function updateCurrentItem(
+        string $sessionId,
+        string $itemId,
+        \DateTimeImmutable $presentedAt
+    ): void {
+        LiminSession::where('id', $sessionId)
+            ->update([
+                'current_item_id' => $itemId,
+                'current_item_presented_at' => $presentedAt,
+            ]);
+    }
+
+    public function markInterruptOffered(string $sessionId, \DateTimeImmutable $offeredAt): void
+    {
+        LiminSession::where('id', $sessionId)
+            ->update(['interrupt_offered_at' => $offeredAt]);
+    }
+
+    public function markInterruptAccepted(string $sessionId, \DateTimeImmutable $acceptedAt): void
+    {
+        LiminSession::where('id', $sessionId)
+            ->update(['interrupt_accepted_at' => $acceptedAt]);
     }
 
     private function toEntity(LiminSession $model): Session

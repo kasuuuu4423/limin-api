@@ -4,6 +4,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CaptureController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\NextController;
+use App\Http\Controllers\SessionController;
 use Illuminate\Support\Facades\Route;
 
 // 認証不要
@@ -19,7 +21,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/item/{id}', [ItemController::class, 'destroy']);
     Route::post('/item/{id}/next-action', [ItemController::class, 'updateNextAction']);
 
-    // Phase 3以降で追加するエンドポイント
-    // Route::post('/session/start', [SessionController::class, 'start']);
-    // Route::post('/session/stop', [SessionController::class, 'stop']);
+    // Phase 3: セッション管理
+    Route::post('/session/start', [SessionController::class, 'start']);
+    Route::post('/session/stop', [SessionController::class, 'stop']);
+
+    // Phase 4: 選定ロジック（セッション必須）
+    Route::middleware('session.active')->group(function () {
+        Route::get('/next', [NextController::class, 'show']);
+        Route::post('/next/interrupt/accept', [NextController::class, 'acceptInterrupt']);
+        Route::post('/next/interrupt/reject', [NextController::class, 'rejectInterrupt']);
+    });
 });

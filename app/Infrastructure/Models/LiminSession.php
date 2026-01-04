@@ -35,6 +35,7 @@ final class LiminSession extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'id',
         'user_id',
         'device_id',
         'started_at',

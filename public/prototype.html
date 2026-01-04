@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limin 画面遷移 体験テスト</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --text-primary: #e8e8ec;
+            --text-secondary: #8888a0;
+            --text-muted: #555566;
+            --accent-main: #7c6aef;
+            --accent-glow: #9d8fff;
+            --accent-soft: rgba(124, 106, 239, 0.15);
+            --success: #4cd9a0;
+            --success-soft: rgba(76, 217, 160, 0.15);
+            --warning: #f0b85a;
+            --warning-soft: rgba(240, 184, 90, 0.15);
+            --danger: #ef6a6a;
+            --border: rgba(255, 255, 255, 0.06);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Background Pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 106, 239, 0.12), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(76, 217, 160, 0.06), transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        header {
+            position: relative;
+            z-index: 10;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .logo span {
+            color: var(--accent-main);
+        }
+
+        .test-label {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 4px 8px;
+            background: var(--warning-soft);
+            color: var(--warning);
+            border-radius: 4px;
+            margin-left: 12px;
+        }
+
+        .state-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .state-badge {
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--accent-soft);
+            color: var(--accent-main);
+            border: 1px solid rgba(124, 106, 239, 0.3);
+        }
+
+        .state-badge.session-active {
+            background: var(--success-soft);
+            color: var(--success);
+            border-color: rgba(76, 217, 160, 0.3);
+        }
+
+        /* Main Content */
+        main {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            animation: fadeIn 0.4s ease;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 48px 40px;
+            width: 100%;
+            box-shadow: var(--shadow);
+        }
+
+        /* Typography */
+        .question {
+            font-size: 32px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .sub-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        .next-action {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+            padding: 20px 24px;
+            border-radius: var(--radius-sm);
+            margin: 24px 0 40px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .next-action-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 18px 32px;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: inherit;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-main);
+            color: white;
+            box-shadow: 0 4px 20px rgba(124, 106, 239, 0.4);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-glow);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(124, 106, 239, 0.5);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #0a0a0f;
+            box-shadow: 0 4px 20px rgba(76, 217, 160, 0.4);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(76, 217, 160, 0.5);
+        }
+
+        /* Working Screen */
+        .working-indicator {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--accent-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            position: relative;
+        }
+
+        .working-indicator::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--accent-main);
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .working-indicator svg {
+            width: 48px;
+            height: 48px;
+            color: var(--accent-main);
+        }
+
+        .working-text {
+            font-size: 20px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        /* Session End */
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--success-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            color: var(--success);
+        }
+
+        .success-message {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .success-sub {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        /* Interrupt */
+        .interrupt-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--warning-soft);
+            color: var(--warning);
+            margin-bottom: 24px;
+        }
+
+        /* Minimize Action Input */
+        .minimize-input {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 16px;
+            font-family: inherit;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            transition: var(--transition);
+        }
+
+        .minimize-input:focus {
+            outline: none;
+            border-color: var(--accent-main);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .minimize-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Footer Debug Panel */
+        footer {
+            position: relative;
+            z-index: 10;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .debug-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .debug-btn {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .debug-btn:hover {
+            color: var(--text-secondary);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .debug-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-right: 8px;
+        }
+
+        /* Timebox Badge */
+        .timebox-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .timebox-badge svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Link Buttons (補助操作) */
+        .link-btn {
+            font-size: 13px;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 12px;
+            transition: var(--transition);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .link-btn:hover {
+            color: var(--text-secondary);
+        }
+
+        .link-btn.danger:hover {
+            color: var(--danger);
+        }
+
+        .sub-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 40px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .modal-question {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 32px;
+        }
+
+        .modal-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Screen Label */
+        .screen-label {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 4px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 520px) {
+            .card {
+                padding: 32px 24px;
+            }
+
+            .question {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div style="display: flex; align-items: center;">
+            <div class="logo"><span>L</span>imin</div>
+            <span class="test-label">体験テスト用</span>
+        </div>
+        <div class="state-indicator">
+            <span id="sessionBadge" class="state-badge">セッション外</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- 段階0: 作業開始 -->
+        <div id="screen-start" class="screen active">
+            <span class="screen-label">仕様書 §6 段階0</span>
+            <div class="card">
+                <p class="question">今やる？</p>
+                <p class="sub-text">内容・件数・状態は表示しません</p>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="goToNext()">今やる</button>
+                    <button class="btn btn-secondary" onclick="endSession()">今は無理</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 段階1: 特定の一件 -->
+        <div id="screen-next" class="screen">
+            <span class="screen-label">仕様書 §6 段階1</span>
+            <div class="card">
+                <p class="question">次はこれ</p>
+                <div class="next-action">
+                    <div class="next-action-label">Next Action</div>
+                    <div id="currentNextAction">母に返信する</div>
+                    <div class="timebox-badge" id="timeboxBadge">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span id="timeboxValue">15分</span>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="startWorking()">これをやる</button>
+                    <button class="btn btn-secondary" onclick="skipTask()">今は無理</button>
+                </div>
+                <div class="sub-actions">
+                    <button class="link-btn danger" onclick="deleteTask()">削除</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 段階1.5: 作業中 -->
+        <div id="screen-working" class="screen">
+            <span class="screen-label">仕様書 §6 段階1.5</span>
+            <div class="card">
+                <div class="working-indicator">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <p class="working-text" id="workingAction">母に返信する</p>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="showCompleteConfirm()">完了</button>
+                </div>
+                <div class="sub-actions">
+                    <button class="link-btn" onclick="backToNext()">戻る</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 完了確認ダイアログ -->
+        <div id="modal-complete-confirm" class="modal-overlay">
+            <div class="modal-card">
+                <p class="modal-question">完了しますか？</p>
+                <div class="modal-btn-group">
+                    <button class="btn btn-success" onclick="confirmComplete()">完了する</button>
+                    <button class="btn btn-secondary" onclick="cancelComplete()">キャンセル</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 段階2: 完了後の間 -->
+        <div id="screen-continue" class="screen">
+            <span class="screen-label">仕様書 §6 段階2</span>
+            <div class="card">
+                <p class="question">次もやる？</p>
+                <p class="sub-text">「ここまで」は成功です</p>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="continueSession()">やる</button>
+                    <button class="btn btn-secondary" onclick="endSession()">ここまで</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 締切割り込み -->
+        <div id="screen-interrupt" class="screen">
+            <span class="screen-label">仕様書 §8 締切割り込み</span>
+            <div class="card">
+                <span class="interrupt-badge">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    締切間近
+                </span>
+                <p class="question">締切が近いものがある。これにする？</p>
+                <div class="next-action">
+                    <div class="next-action-label">Next Action</div>
+                    <div id="interruptNextAction">請求書を提出する</div>
+                    <div class="timebox-badge">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>30分</span>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="acceptInterrupt()">はい</button>
+                    <button class="btn btn-secondary" onclick="rejectInterrupt()">いいえ（今日は別のにする）</button>
+                </div>
+                <div class="sub-actions">
+                    <button class="link-btn danger" onclick="deleteInterrupt()">削除</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 巨大タスク対策 -->
+        <div id="screen-big-task" class="screen">
+            <span class="screen-label">仕様書 §9 巨大タスク対策</span>
+            <div class="card">
+                <p class="question">次はこれ</p>
+                <div class="next-action">
+                    <div class="next-action-label">Next Action</div>
+                    <div id="bigTaskAction">プレゼン資料を作成する</div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="startWorkingBig()">このままやる</button>
+                    <button class="btn btn-secondary" onclick="showMinimize()">最小の一手にする</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最小の一手入力 -->
+        <div id="screen-minimize" class="screen">
+            <span class="screen-label">仕様書 §9 最小の一手</span>
+            <div class="card">
+                <p class="question">最小の一手に書き換え</p>
+                <p class="sub-text">1行で書いてください</p>
+                <input type="text" class="minimize-input" id="minimizeInput" placeholder="例: スライドのタイトルだけ決める">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveMinimize()">保存してやる</button>
+                    <button class="btn btn-secondary" onclick="cancelMinimize()">戻る</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- セッション終了 -->
+        <div id="screen-end" class="screen">
+            <span class="screen-label">セッション終了</span>
+            <div class="card">
+                <div class="success-icon">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <p class="success-message">おつかれさまでした</p>
+                <p class="success-sub">完全に静かになります</p>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="restart()">最初から体験する</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="debug-panel">
+            <span class="debug-label">画面ジャンプ:</span>
+            <button class="debug-btn" onclick="showScreen('screen-start')">段階0</button>
+            <button class="debug-btn" onclick="showScreen('screen-next')">段階1</button>
+            <button class="debug-btn" onclick="showScreen('screen-working')">段階1.5</button>
+            <button class="debug-btn" onclick="showScreen('screen-continue')">段階2</button>
+            <button class="debug-btn" onclick="showScreen('screen-interrupt')">割り込み</button>
+            <button class="debug-btn" onclick="showScreen('screen-big-task')">巨大タスク</button>
+            <button class="debug-btn" onclick="showScreen('screen-minimize')">最小化</button>
+            <button class="debug-btn" onclick="showScreen('screen-end')">終了</button>
+        </div>
+    </footer>
+
+    <script>
+        // サンプルタスク（体験テスト用ダミーデータ）
+        const sampleTasks = [
+            { nextAction: '母に返信する', timebox: 5 },
+            { nextAction: '経費精算を入力する', timebox: 15 },
+            { nextAction: '報告書のドラフトを書く', timebox: 30 },
+            { nextAction: 'メールを確認する', timebox: 5 },
+            { nextAction: 'ミーティングメモを整理する', timebox: 15 }
+        ];
+
+        let currentTaskIndex = 0;
+        let sessionActive = false;
+        let interruptShown = false;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function updateSessionBadge(active) {
+            const badge = document.getElementById('sessionBadge');
+            if (active) {
+                badge.textContent = 'セッション中';
+                badge.classList.add('session-active');
+            } else {
+                badge.textContent = 'セッション外';
+                badge.classList.remove('session-active');
+            }
+            sessionActive = active;
+        }
+
+        function loadTask(index) {
+            const task = sampleTasks[index % sampleTasks.length];
+            document.getElementById('currentNextAction').textContent = task.nextAction;
+            document.getElementById('timeboxValue').textContent = task.timebox + '分';
+            document.getElementById('workingAction').textContent = task.nextAction;
+        }
+
+        // 段階0 → 段階1
+        function goToNext() {
+            updateSessionBadge(true);
+
+            // 20%の確率で締切割り込みを表示（体験テスト用）
+            if (!interruptShown && Math.random() < 0.2) {
+                interruptShown = true;
+                showScreen('screen-interrupt');
+            } else {
+                loadTask(currentTaskIndex);
+                showScreen('screen-next');
+            }
+        }
+
+        // 段階1 → 作業中
+        function startWorking() {
+            // 30%の確率で巨大タスク対策を表示（体験テスト用）
+            if (Math.random() < 0.3) {
+                document.getElementById('bigTaskAction').textContent =
+                    document.getElementById('currentNextAction').textContent;
+                showScreen('screen-big-task');
+            } else {
+                showScreen('screen-working');
+            }
+        }
+
+        // 段階1「今は無理」→ 次の候補を提示
+        function skipTask() {
+            currentTaskIndex++;
+            if (currentTaskIndex >= sampleTasks.length) {
+                // 候補がなくなった場合はセッション終了
+                endSession();
+            } else {
+                loadTask(currentTaskIndex);
+                showScreen('screen-next');
+            }
+        }
+
+        // 段階1「削除」→ タスクを削除し次の候補を提示
+        function deleteTask() {
+            currentTaskIndex++;
+            if (currentTaskIndex >= sampleTasks.length) {
+                endSession();
+            } else {
+                loadTask(currentTaskIndex);
+                showScreen('screen-next');
+            }
+        }
+
+        // 巨大タスク → 作業中
+        function startWorkingBig() {
+            document.getElementById('workingAction').textContent =
+                document.getElementById('bigTaskAction').textContent;
+            showScreen('screen-working');
+        }
+
+        // 作業中「完了」→ 確認ダイアログ表示
+        function showCompleteConfirm() {
+            document.getElementById('modal-complete-confirm').classList.add('active');
+        }
+
+        // 完了確認「完了する」→ 段階2へ
+        function confirmComplete() {
+            document.getElementById('modal-complete-confirm').classList.remove('active');
+            showScreen('screen-continue');
+        }
+
+        // 完了確認「キャンセル」→ 作業中画面に戻る
+        function cancelComplete() {
+            document.getElementById('modal-complete-confirm').classList.remove('active');
+        }
+
+        // 作業中「戻る」→ 段階1へ（同じタスクを再提示）
+        function backToNext() {
+            showScreen('screen-next');
+        }
+
+        // 段階2 → 段階1
+        function continueSession() {
+            currentTaskIndex++;
+            loadTask(currentTaskIndex);
+            showScreen('screen-next');
+        }
+
+        // セッション終了
+        function endSession() {
+            updateSessionBadge(false);
+            showScreen('screen-end');
+        }
+
+        // 締切割り込み承認
+        function acceptInterrupt() {
+            document.getElementById('currentNextAction').textContent =
+                document.getElementById('interruptNextAction').textContent;
+            document.getElementById('timeboxValue').textContent = '30分';
+            document.getElementById('workingAction').textContent =
+                document.getElementById('interruptNextAction').textContent;
+            showScreen('screen-next');
+        }
+
+        // 締切割り込み拒否
+        function rejectInterrupt() {
+            loadTask(currentTaskIndex);
+            showScreen('screen-next');
+        }
+
+        // 締切割り込み削除 → 通常レーンの段階1へ
+        function deleteInterrupt() {
+            loadTask(currentTaskIndex);
+            showScreen('screen-next');
+        }
+
+        // 最小化画面表示
+        function showMinimize() {
+            showScreen('screen-minimize');
+        }
+
+        // 最小化保存
+        function saveMinimize() {
+            const newAction = document.getElementById('minimizeInput').value;
+            if (newAction.trim()) {
+                document.getElementById('workingAction').textContent = newAction;
+                showScreen('screen-working');
+            }
+        }
+
+        // 最小化キャンセル
+        function cancelMinimize() {
+            showScreen('screen-big-task');
+        }
+
+        // 最初から
+        function restart() {
+            currentTaskIndex = 0;
+            interruptShown = false;
+            document.getElementById('minimizeInput').value = '';
+            loadTask(0);
+            showScreen('screen-start');
+        }
+
+        // 初期化
+        loadTask(0);
+    </script>
+</body>
+
+</html>
