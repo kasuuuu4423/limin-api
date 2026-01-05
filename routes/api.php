@@ -6,6 +6,7 @@ use App\Http\Controllers\HealthController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\NextController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 // 認証不要
@@ -25,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/item/{id}/complete', [ItemController::class, 'complete']);
     Route::post('/item/{id}/continue', [ItemController::class, 'continueItem']);
     Route::post('/item/{id}/defer', [ItemController::class, 'defer']);
+    Route::post('/items/unblock', [ItemController::class, 'unblock']);
 
     // Phase 3: セッション管理
     Route::post('/session/start', [SessionController::class, 'start']);
@@ -36,4 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/next/interrupt/accept', [NextController::class, 'acceptInterrupt']);
         Route::post('/next/interrupt/reject', [NextController::class, 'rejectInterrupt']);
     });
+
+    // Phase 6: ユーザー設定
+    Route::get('/settings', [SettingsController::class, 'show']);
+    Route::patch('/settings', [SettingsController::class, 'update']);
 });

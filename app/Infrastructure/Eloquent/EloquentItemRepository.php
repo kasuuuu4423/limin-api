@@ -96,6 +96,15 @@ final class EloquentItemRepository implements ItemRepositoryInterface
             ->update(['last_presented_at' => $presentedAt]);
     }
 
+    public function unblockAll(int $userId): int
+    {
+        return ItemModel::query()
+            ->where('user_id', $userId)
+            ->where('availability', Availability::BLOCKED->value)
+            ->whereNull('done_at')
+            ->update(['availability' => Availability::NOW->value]);
+    }
+
     /**
      * 通常レーン・締切割り込み共通の選定条件クエリ
      *

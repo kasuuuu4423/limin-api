@@ -8,7 +8,6 @@ use App\Infrastructure\Models\Item as ItemModel;
 use App\Models\User;
 use Domain\Limin\ValueObject\Availability;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 final class RestoreLaterItems extends Command
 {
@@ -37,7 +36,7 @@ final class RestoreLaterItems extends Command
         // later_restore_at が現在時刻と一致するユーザーを取得
         // 1分の幅を持たせて判定（スケジューラーが毎分実行される想定）
         $users = User::query()
-            ->whereRaw("later_restore_at BETWEEN ? AND ?", [
+            ->whereRaw('later_restore_at BETWEEN ? AND ?', [
                 $now->copy()->startOfMinute()->format('H:i:s'),
                 $now->copy()->endOfMinute()->format('H:i:s'),
             ])
@@ -64,7 +63,3 @@ final class RestoreLaterItems extends Command
         return Command::SUCCESS;
     }
 }
-
-
-
-

@@ -66,4 +66,3 @@ final readonly class ContinueItemUseCase
         return true;
     }
 }
-

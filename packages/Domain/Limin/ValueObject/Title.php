@@ -34,5 +34,3 @@ final class Title
         return $this->value;
     }
 }
-
-

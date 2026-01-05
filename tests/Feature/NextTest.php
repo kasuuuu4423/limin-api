@@ -68,7 +68,7 @@ final class NextTest extends TestCase
             ->assertJsonMissing(['is_interrupt', 'needs_first_action']);
     }
 
-    public function test_get_next_returns_item_in_fifo_order(): void
+    public function test_get_next_returns_one_of_eligible_items_randomly(): void
     {
         $item1 = Item::create([
             'id' => fake()->uuid(),
@@ -97,11 +97,11 @@ final class NextTest extends TestCase
         $response = $this->actingAs($this->user)
             ->getJson('/api/next');
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'id' => $item1->id,
-                'next_action' => '最初の一手',
-            ]);
+        $response->assertStatus(200);
+
+        // ランダム選定なので、どちらかのItemが返される
+        $returnedId = $response->json('id');
+        $this->assertContains($returnedId, [$item1->id, $item2->id]);
     }
 
     public function test_get_next_excludes_completed_items(): void
@@ -343,11 +343,11 @@ final class NextTest extends TestCase
             ->postJson('/api/next/interrupt/reject');
 
         $response->assertStatus(200)
-            ->assertJson([
-                'id' => $normalItem->id,
-                'next_action' => '通常の一手',
-            ])
             ->assertJsonMissing(['is_interrupt']);
+
+        // ランダム選定なので、どちらかの通常Itemが返される
+        $returnedId = $response->json('id');
+        $this->assertContains($returnedId, [$urgentItem->id, $normalItem->id]);
     }
 
     public function test_reject_interrupt_returns_204_when_no_normal_items(): void

@@ -676,13 +676,13 @@ Item::query()
     ->where('user_id', $user->id)
     ->where('availability', Availability::NOW)
     ->where('state', ItemState::DO)
-    ->whereNotNull('next_action')
-    ->where('next_action', '!=', '')
     ->whereNull('done_at')
     ->excludeSessionDeferred($session)
-    ->orderBy('created_at', 'asc')
+    ->inRandomOrder()  // ランダム選定
     ->first();
 ```
+
+※ `next_action` の有無は選定条件に含めない
 
 ### 締切割り込みレーン
 
@@ -691,13 +691,11 @@ Item::query()
     ->where('user_id', $user->id)
     ->where('availability', Availability::NOW)
     ->where('state', ItemState::DO)
-    ->whereNotNull('next_action')
-    ->where('next_action', '!=', '')
     ->whereNull('done_at')
     ->whereNotNull('due_at')
     ->where('due_at', '<=', now()->addHours(48))
     ->excludeSessionDeferred($session)
-    ->orderBy('due_at', 'asc')
+    ->orderBy('due_at', 'asc')  // 締切が最も近いものを優先
     ->first();
 ```
 

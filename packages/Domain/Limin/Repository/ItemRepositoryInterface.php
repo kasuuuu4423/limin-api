@@ -45,4 +45,11 @@ interface ItemRepositoryInterface
      * Itemの last_presented_at を更新
      */
     public function updateLastPresentedAt(string $itemId, \DateTimeImmutable $presentedAt): void;
+
+    /**
+     * BLOCKEDのItemをすべてNOWに変更
+     *
+     * @return int 更新されたItem数
+     */
+    public function unblockAll(int $userId): int;
 }

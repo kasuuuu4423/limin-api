@@ -16,4 +16,3 @@ final class TestUIController extends Controller
         return view('test-ui');
     }
 }
-

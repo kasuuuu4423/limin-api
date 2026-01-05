@@ -13,7 +13,9 @@ use Domain\Limin\Repository\ItemRepositoryInterface;
  *
  * 選定レーン:
  * 1. 締切割り込みレーン: dueAtが48時間以内、セッション中1回のみ
- * 2. 通常レーン: availability=NOW, state=DO, FIFO
+ * 2. 通常レーン: availability=NOW, state=DO, done_at IS NULL, ランダム選定
+ *
+ * ※ next_action の有無は選定条件に含めない
  */
 final readonly class ItemSelectionService
 {

@@ -29,7 +29,3 @@ final class CompleteItemUseCase
         return true;
     }
 }
-
-
-
-

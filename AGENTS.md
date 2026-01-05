@@ -32,9 +32,10 @@ php artisan test
 
 ### `/next` 選定ロジック
 
-- 通常レーン: `availability=NOW`, `state=DO`, `next_action` 存在, FIFO
+- 通常レーン: `availability=NOW`, `state=DO`, `done_at IS NULL`, ランダム選定
 - 締切割り込み: `due_at` が48時間以内、セッション中1回のみ
 - セッション内抑制: 同セッション中の先送りItemは再提示しない
+- `next_action` の有無は選定条件に含めない
 
 ### セッション管理
 

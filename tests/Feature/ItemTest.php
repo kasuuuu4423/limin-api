@@ -143,7 +143,7 @@ final class ItemTest extends TestCase
         // 更新されていないことを確認
         $this->assertDatabaseHas('items', [
             'id' => $item->id,
-            'next_action' => '他のユーザーのタスク',
+            'next_action' => '他の一手',
         ]);
     }
 
@@ -519,6 +519,137 @@ final class ItemTest extends TestCase
         $response = $this->postJson("/api/item/{$item->id}/continue", [
             'next_action' => '次の一手',
         ]);
+
+        $response->assertStatus(401);
+    }
+
+    // ========================================
+    // Phase 5: Unblock（BLOCKED一括解除）テスト
+    // ========================================
+
+    public function test_authenticated_user_can_unblock_items(): void
+    {
+        $user = User::factory()->create();
+
+        // BLOCKEDのItemを複数作成
+        Item::create([
+            'user_id' => $user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'BLOCKED',
+            'title' => 'ブロック1',
+            'next_action' => '一手1',
+            'meta' => false,
+        ]);
+        Item::create([
+            'user_id' => $user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'BLOCKED',
+            'title' => 'ブロック2',
+            'next_action' => '一手2',
+            'meta' => false,
+        ]);
+        // NOWのItemは影響を受けない
+        Item::create([
+            'user_id' => $user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => 'NOW',
+            'next_action' => '一手3',
+            'meta' => false,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/items/unblock');
+
+        $response->assertStatus(200)
+            ->assertJson(['count' => 2]);
+
+        // BLOCKEDがNOWに変更されていることを確認
+        $this->assertDatabaseHas('items', [
+            'title' => 'ブロック1',
+            'availability' => 'NOW',
+        ]);
+        $this->assertDatabaseHas('items', [
+            'title' => 'ブロック2',
+            'availability' => 'NOW',
+        ]);
+    }
+
+    public function test_unblock_returns_zero_when_no_blocked_items(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/items/unblock');
+
+        $response->assertStatus(200)
+            ->assertJson(['count' => 0]);
+    }
+
+    public function test_unblock_only_affects_own_items(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        // 他のユーザーのBLOCKEDアイテム
+        Item::create([
+            'user_id' => $otherUser->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'BLOCKED',
+            'title' => '他ユーザーのブロック',
+            'next_action' => '一手',
+            'meta' => false,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/items/unblock');
+
+        $response->assertStatus(200)
+            ->assertJson(['count' => 0]);
+
+        // 他のユーザーのItemは変更されない
+        $this->assertDatabaseHas('items', [
+            'title' => '他ユーザーのブロック',
+            'availability' => 'BLOCKED',
+        ]);
+    }
+
+    public function test_unblock_excludes_completed_items(): void
+    {
+        $user = User::factory()->create();
+
+        // 完了済みのBLOCKEDアイテムは解除しない
+        Item::create([
+            'user_id' => $user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'BLOCKED',
+            'title' => '完了済みブロック',
+            'next_action' => '一手',
+            'meta' => false,
+            'done_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/items/unblock');
+
+        $response->assertStatus(200)
+            ->assertJson(['count' => 0]);
+
+        // 完了済みItemは変更されない
+        $this->assertDatabaseHas('items', [
+            'title' => '完了済みブロック',
+            'availability' => 'BLOCKED',
+        ]);
+    }
+
+    public function test_unblock_requires_authentication(): void
+    {
+        $response = $this->postJson('/api/items/unblock');
 
         $response->assertStatus(401);
     }

@@ -10,6 +10,7 @@ use App\UseCases\CompleteItemUseCase;
 use App\UseCases\ContinueItemUseCase;
 use App\UseCases\DeferItemUseCase;
 use App\UseCases\DeleteItemUseCase;
+use App\UseCases\UnblockItemsUseCase;
 use App\UseCases\UpdateNextActionUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ final class ItemController extends Controller
         private readonly CompleteItemUseCase $completeItemUseCase,
         private readonly ContinueItemUseCase $continueItemUseCase,
         private readonly DeferItemUseCase $deferItemUseCase,
+        private readonly UnblockItemsUseCase $unblockItemsUseCase,
     ) {}
 
     /**
@@ -147,5 +149,25 @@ final class ItemController extends Controller
         }
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * POST /items/unblock
+     * BLOCKED一括解除
+     *
+     * availability = BLOCKED のItemをすべて NOW に変更する
+     */
+    public function unblock(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $count = $this->unblockItemsUseCase->execute(
+            userId: $user->id,
+        );
+
+        return response()->json([
+            'count' => $count,
+        ]);
     }
 }
