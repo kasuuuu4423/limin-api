@@ -6,10 +6,10 @@ namespace App\UseCases;
 
 use Domain\Limin\Repository\ItemRepositoryInterface;
 
-final class UnblockItemsUseCase
+final readonly class UnblockItemsUseCase
 {
     public function __construct(
-        private readonly ItemRepositoryInterface $itemRepository,
+        private ItemRepositoryInterface $itemRepository,
     ) {}
 
     /**

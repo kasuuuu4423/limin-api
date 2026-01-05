@@ -513,4 +513,230 @@ final class NextTest extends TestCase
                 'id' => $activeItem->id,
             ]);
     }
+
+    // ========================================
+    // 選定ロジック重点テスト（フェーズ6追加分）
+    // ========================================
+
+    public function test_deadline_interrupt_selects_closest_deadline(): void
+    {
+        // 48時間後の締切
+        $laterDeadlineItem = Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '後の締切タスク',
+            'next_action' => '後の一手',
+            'meta' => false,
+            'due_at' => now()->addHours(47),
+        ]);
+
+        // 24時間後の締切（より近い）
+        $closerDeadlineItem = Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '近い締切タスク',
+            'next_action' => '近い一手',
+            'meta' => false,
+            'due_at' => now()->addHours(12),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/next');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'id' => $closerDeadlineItem->id,
+                'is_interrupt' => true,
+            ]);
+    }
+
+    public function test_get_next_excludes_deleted_items(): void
+    {
+        // 論理削除されたItem
+        $deletedItem = Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '削除されたタスク',
+            'next_action' => '削除の一手',
+            'meta' => false,
+        ]);
+        $deletedItem->delete();
+
+        // 有効なItem
+        $activeItem = Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '有効なタスク',
+            'next_action' => '有効な一手',
+            'meta' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/next');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'id' => $activeItem->id,
+            ]);
+    }
+
+    public function test_get_next_excludes_other_users_items(): void
+    {
+        $otherUser = User::factory()->create();
+
+        // 他のユーザーのItem
+        Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $otherUser->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '他ユーザーのタスク',
+            'next_action' => '他の一手',
+            'meta' => false,
+        ]);
+
+        // 自分のItemがない場合
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/next');
+
+        $response->assertStatus(204);
+    }
+
+    public function test_get_next_excludes_items_with_availability_blocked(): void
+    {
+        Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'BLOCKED',
+            'title' => 'ブロック中タスク',
+            'next_action' => 'ブロックの一手',
+            'meta' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/next');
+
+        $response->assertStatus(204);
+    }
+
+    public function test_deadline_interrupt_includes_past_deadlines(): void
+    {
+        // 過去の締切も割り込み対象（締切を過ぎたタスクも優先的に提示）
+        $pastDeadlineItem = Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '過去の締切タスク',
+            'next_action' => '過去の一手',
+            'meta' => false,
+            'due_at' => now()->subHours(1),
+        ]);
+
+        // 通常のItem
+        Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '通常タスク',
+            'next_action' => '通常の一手',
+            'meta' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/next');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'id' => $pastDeadlineItem->id,
+                'is_interrupt' => true,
+            ]);
+    }
+
+    public function test_deadline_interrupt_excludes_deadlines_beyond_48_hours(): void
+    {
+        // 49時間後の締切は割り込み対象外
+        Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => '遠い締切タスク',
+            'next_action' => '遠い一手',
+            'meta' => false,
+            'due_at' => now()->addHours(49),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/next');
+
+        // 通常レーンとして返される（締切割り込みではない）
+        $response->assertStatus(200)
+            ->assertJsonMissing(['is_interrupt' => true]);
+    }
+
+    public function test_get_next_with_next_action_null_is_still_selected(): void
+    {
+        // next_actionがnullでも選定される（仕様: next_actionの有無は選定条件に含めない）
+        $item = Item::create([
+            'id' => fake()->uuid(),
+            'user_id' => $this->user->id,
+            'type' => 'task',
+            'state' => 'DO',
+            'availability' => 'NOW',
+            'title' => 'タスク名のみ',
+            'next_action' => null,
+            'meta' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/next');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'id' => $item->id,
+                'title' => 'タスク名のみ',
+            ]);
+    }
+
+    public function test_accept_interrupt_requires_active_session(): void
+    {
+        // セッションを終了
+        $this->session->update(['stopped_at' => now()]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/next/interrupt/accept');
+
+        $response->assertStatus(403);
+    }
+
+    public function test_reject_interrupt_requires_active_session(): void
+    {
+        // セッションを終了
+        $this->session->update(['stopped_at' => now()]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/next/interrupt/reject');
+
+        $response->assertStatus(403);
+    }
 }

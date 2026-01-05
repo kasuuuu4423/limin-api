@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\UseCases;
 
-use App\Infrastructure\Models\Item as ItemModel;
+use Domain\Limin\Entity\Item;
+use Domain\Limin\Repository\ItemRepositoryInterface;
 use Domain\Limin\ValueObject\Availability;
 
-final class DeferItemUseCase
+final readonly class DeferItemUseCase
 {
+    public function __construct(
+        private ItemRepositoryInterface $itemRepository,
+    ) {}
+
     /**
      * Itemを先送り状態（LATER）にする
      *
@@ -19,17 +24,38 @@ final class DeferItemUseCase
      */
     public function execute(int $userId, string $itemId): bool
     {
-        $item = ItemModel::where('id', $itemId)
-            ->where('user_id', $userId)
-            ->first();
+        $item = $this->itemRepository->findById($itemId);
 
         if ($item === null) {
             return false;
         }
 
-        $item->availability = Availability::LATER->value;
-        $item->last_presented_at = now();
-        $item->save();
+        // 所有者チェック
+        if ($item->userId !== $userId) {
+            return false;
+        }
+
+        $now = new \DateTimeImmutable;
+
+        $updatedItem = new Item(
+            id: $item->id,
+            userId: $item->userId,
+            type: $item->type,
+            state: $item->state,
+            availability: Availability::LATER,
+            title: $item->title,
+            nextAction: $item->nextAction,
+            dueAt: $item->dueAt,
+            timebox: $item->timebox,
+            meta: $item->meta,
+            lastPresentedAt: $now,
+            doneAt: $item->doneAt,
+            createdAt: $item->createdAt,
+            updatedAt: $now,
+            deletedAt: $item->deletedAt,
+        );
+
+        $this->itemRepository->save($updatedItem);
 
         return true;
     }

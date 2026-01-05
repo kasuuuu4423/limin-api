@@ -21,9 +21,10 @@ interface ItemRepositoryInterface
      * 選定条件:
      * - availability = NOW
      * - state = DO
-     * - next_action が存在（NOT NULL かつ空文字でない）
      * - done_at = NULL（未完了）
      * - セッション開始後に先送りされたItemを除外
+     *
+     * ※ next_action の有無は選定条件に含めない
      *
      * @return Item|null 選定されたItem（なければnull）
      */
