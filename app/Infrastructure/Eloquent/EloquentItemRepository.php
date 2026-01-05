@@ -13,6 +13,7 @@ use Domain\Limin\ValueObject\Availability;
 use Domain\Limin\ValueObject\ItemState;
 use Domain\Limin\ValueObject\ItemType;
 use Domain\Limin\ValueObject\NextAction;
+use Domain\Limin\ValueObject\Title;
 use Illuminate\Database\Eloquent\Builder;
 
 final class EloquentItemRepository implements ItemRepositoryInterface
@@ -41,7 +42,8 @@ final class EloquentItemRepository implements ItemRepositoryInterface
         $model->type = $item->type->value;
         $model->state = $item->state->value;
         $model->availability = $item->availability->value;
-        $model->next_action = $item->nextAction->value;
+        $model->title = $item->title->value;
+        $model->next_action = $item->nextAction?->value;
         $model->due_at = $item->dueAt !== null ? Carbon::instance($item->dueAt) : null;
         $model->timebox = $item->timebox;
         $model->meta = $item->meta;
@@ -58,8 +60,9 @@ final class EloquentItemRepository implements ItemRepositoryInterface
 
     public function findNextCandidate(int $userId, Session $session): ?Item
     {
+        // ランダム選定
         $model = $this->baseCandidateQuery($userId, $session)
-            ->orderBy('created_at', 'asc')
+            ->inRandomOrder()
             ->first();
 
         if ($model === null) {
@@ -73,6 +76,7 @@ final class EloquentItemRepository implements ItemRepositoryInterface
     {
         $threshold = new \DateTimeImmutable("+{$withinHours} hours");
 
+        // 締切が近いItemを割り込み選定（締切順）
         $model = $this->baseCandidateQuery($userId, $session)
             ->whereNotNull('due_at')
             ->where('due_at', '<=', $threshold)
@@ -103,8 +107,6 @@ final class EloquentItemRepository implements ItemRepositoryInterface
             ->where('user_id', $userId)
             ->where('availability', Availability::NOW->value)
             ->where('state', ItemState::DO->value)
-            ->whereNotNull('next_action')
-            ->where('next_action', '!=', '')
             ->whereNull('done_at')
             ->where(function (Builder $query) use ($session) {
                 // セッション開始後に先送りされたItemを除外
@@ -126,7 +128,10 @@ final class EloquentItemRepository implements ItemRepositoryInterface
             type: ItemType::from($model->type),
             state: ItemState::from($model->state),
             availability: Availability::from($model->availability),
-            nextAction: NextAction::create($model->next_action),
+            title: Title::create($model->title),
+            nextAction: $model->next_action !== null && $model->next_action !== ''
+                ? NextAction::create($model->next_action)
+                : null,
             dueAt: $model->due_at?->toDateTimeImmutable(),
             timebox: $model->timebox,
             meta: $model->meta,

@@ -16,7 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $type
  * @property string $state
  * @property string $availability
- * @property string $next_action
+ * @property string $title
+ * @property string|null $next_action
  * @property \Carbon\Carbon|null $due_at
  * @property int|null $timebox
  * @property bool $meta
@@ -43,6 +44,7 @@ final class Item extends Model
         'type',
         'state',
         'availability',
+        'title',
         'next_action',
         'due_at',
         'timebox',

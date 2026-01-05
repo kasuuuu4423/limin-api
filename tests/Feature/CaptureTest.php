@@ -19,7 +19,7 @@ final class CaptureTest extends TestCase
 
         $response = $this->actingAs($user)
             ->postJson('/api/capture', [
-                'text' => '明日までに企画書を送る',
+                'text' => 'A 企画書',
             ]);
 
         $response->assertStatus(201)
@@ -27,7 +27,8 @@ final class CaptureTest extends TestCase
 
         $this->assertDatabaseHas('items', [
             'user_id' => $user->id,
-            'next_action' => '明日までに企画書を送る',
+            'title' => 'A 企画書',
+            'next_action' => 'A 企画書',
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
@@ -82,6 +83,8 @@ final class CaptureTest extends TestCase
         $item = Item::where('user_id', $user->id)->first();
 
         $this->assertNotNull($item);
+        $this->assertEquals('テストタスク', $item->title);
+        $this->assertEquals('テストタスク', $item->next_action);
         $this->assertEquals('task', $item->type);
         $this->assertEquals('DO', $item->state);
         $this->assertEquals('NOW', $item->availability);

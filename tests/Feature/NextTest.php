@@ -49,7 +49,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '企画書の目次を書く',
+            'title' => 'A 企画書',
+            'next_action' => '目次を書く',
             'meta' => false,
         ]);
 
@@ -59,11 +60,12 @@ final class NextTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'id' => $item->id,
-                'next_action' => '企画書の目次を書く',
+                'title' => 'A 企画書',
+                'next_action' => '目次を書く',
                 'type' => 'task',
                 'meta' => false,
             ])
-            ->assertJsonMissing(['is_interrupt']);
+            ->assertJsonMissing(['is_interrupt', 'needs_first_action']);
     }
 
     public function test_get_next_returns_item_in_fifo_order(): void
@@ -74,7 +76,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '最初のタスク',
+            'title' => '最初のタスク',
+            'next_action' => '最初の一手',
             'meta' => false,
             'created_at' => now()->subMinutes(10),
         ]);
@@ -85,7 +88,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '2番目のタスク',
+            'title' => '2番目のタスク',
+            'next_action' => '2番目の一手',
             'meta' => false,
             'created_at' => now()->subMinutes(5),
         ]);
@@ -96,7 +100,7 @@ final class NextTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'id' => $item1->id,
-                'next_action' => '最初のタスク',
+                'next_action' => '最初の一手',
             ]);
     }
 
@@ -108,7 +112,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '完了済みタスク',
+            'title' => '完了済みタスク',
+            'next_action' => '完了済みの一手',
             'meta' => false,
             'done_at' => now(),
         ]);
@@ -119,7 +124,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '未完了タスク',
+            'title' => '未完了タスク',
+            'next_action' => '未完了の一手',
             'meta' => false,
         ]);
 
@@ -132,24 +138,6 @@ final class NextTest extends TestCase
             ]);
     }
 
-    public function test_get_next_excludes_items_without_next_action(): void
-    {
-        Item::create([
-            'id' => fake()->uuid(),
-            'user_id' => $this->user->id,
-            'type' => 'task',
-            'state' => 'DO',
-            'availability' => 'NOW',
-            'next_action' => '',
-            'meta' => false,
-        ]);
-
-        $response = $this->actingAs($this->user)
-            ->getJson('/api/next');
-
-        $response->assertStatus(204);
-    }
-
     public function test_get_next_excludes_items_with_availability_later(): void
     {
         Item::create([
@@ -158,7 +146,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'LATER',
-            'next_action' => '後でやるタスク',
+            'title' => '後でやるタスク',
+            'next_action' => '後での一手',
             'meta' => false,
         ]);
 
@@ -176,7 +165,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'WAIT',
             'availability' => 'NOW',
-            'next_action' => '待機中タスク',
+            'title' => '待機中タスク',
+            'next_action' => '待機中の一手',
             'meta' => false,
         ]);
 
@@ -195,7 +185,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '緊急タスク',
+            'title' => '緊急タスク',
+            'next_action' => '緊急の一手',
             'meta' => false,
             'due_at' => now()->addHours(24),
             'created_at' => now()->subMinutes(5),
@@ -208,7 +199,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '通常タスク',
+            'title' => '通常タスク',
+            'next_action' => '通常の一手',
             'meta' => false,
             'created_at' => now()->subMinutes(10),
         ]);
@@ -219,7 +211,7 @@ final class NextTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'id' => $urgentItem->id,
-                'next_action' => '緊急タスク',
+                'next_action' => '緊急の一手',
                 'is_interrupt' => true,
             ]);
     }
@@ -233,7 +225,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '緊急タスク',
+            'title' => '緊急タスク',
+            'next_action' => '緊急の一手',
             'meta' => false,
             'due_at' => now()->addHours(24),
         ]);
@@ -245,7 +238,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '通常タスク',
+            'title' => '通常タスク',
+            'next_action' => '通常の一手',
             'meta' => false,
             'created_at' => now()->subMinutes(10),
         ]);
@@ -279,7 +273,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '緊急タスク',
+            'title' => '緊急タスク',
+            'next_action' => '緊急の一手',
             'meta' => false,
             'due_at' => now()->addHours(24),
         ]);
@@ -320,7 +315,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '緊急タスク',
+            'title' => '緊急タスク',
+            'next_action' => '緊急の一手',
             'meta' => false,
             'due_at' => now()->addHours(24),
             'created_at' => now()->subMinutes(5),
@@ -332,7 +328,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '通常タスク',
+            'title' => '通常タスク',
+            'next_action' => '通常の一手',
             'meta' => false,
             'created_at' => now()->subMinutes(10),
         ]);
@@ -348,7 +345,7 @@ final class NextTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'id' => $normalItem->id,
-                'next_action' => '通常タスク',
+                'next_action' => '通常の一手',
             ])
             ->assertJsonMissing(['is_interrupt']);
     }
@@ -361,7 +358,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '緊急タスク',
+            'title' => '緊急タスク',
+            'next_action' => '緊急の一手',
             'meta' => false,
             'due_at' => now()->addHours(24),
         ]);
@@ -399,7 +397,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => 'タスク',
+            'title' => 'タスク',
+            'next_action' => '一手',
             'meta' => false,
         ]);
 
@@ -441,7 +440,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => 'タスク',
+            'title' => 'タスク',
+            'next_action' => '一手',
             'meta' => false,
             'last_presented_at' => null,
         ]);
@@ -461,7 +461,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => 'タスク',
+            'title' => 'タスク',
+            'next_action' => '一手',
             'meta' => false,
         ]);
 
@@ -483,7 +484,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => '先送りされたタスク',
+            'title' => '先送りされたタスク',
+            'next_action' => '先送りの一手',
             'meta' => false,
             'last_presented_at' => now()->addMinutes(1),
             'created_at' => now()->subMinutes(20),
@@ -496,7 +498,8 @@ final class NextTest extends TestCase
             'type' => 'task',
             'state' => 'DO',
             'availability' => 'NOW',
-            'next_action' => 'アクティブタスク',
+            'title' => 'アクティブタスク',
+            'next_action' => 'アクティブの一手',
             'meta' => false,
             'last_presented_at' => now()->subHours(2),
             'created_at' => now()->subMinutes(10),

@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // セッションタイムアウト処理（1時間ごと）
 Schedule::command('session:timeout')->hourly();
+
+// LATER復帰処理（毎分実行、ユーザー設定時刻にLATERをNOWへ復帰）
+Schedule::command('items:restore-later')->everyMinute();

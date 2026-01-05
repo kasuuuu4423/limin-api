@@ -21,6 +21,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/item/{id}', [ItemController::class, 'destroy']);
     Route::post('/item/{id}/next-action', [ItemController::class, 'updateNextAction']);
 
+    // Phase 5: Item状態遷移
+    Route::post('/item/{id}/complete', [ItemController::class, 'complete']);
+    Route::post('/item/{id}/continue', [ItemController::class, 'continueItem']);
+    Route::post('/item/{id}/defer', [ItemController::class, 'defer']);
+
     // Phase 3: セッション管理
     Route::post('/session/start', [SessionController::class, 'start']);
     Route::post('/session/stop', [SessionController::class, 'stop']);

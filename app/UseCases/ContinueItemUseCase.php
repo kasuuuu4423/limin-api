@@ -8,14 +8,23 @@ use Domain\Limin\Entity\Item;
 use Domain\Limin\Repository\ItemRepositoryInterface;
 use Domain\Limin\ValueObject\NextAction;
 
-final readonly class UpdateNextActionUseCase
+/**
+ * 次の一手を設定してタスクを継続する
+ *
+ * 完了時のフロー:
+ * 1. クライアントが「完了」を押す
+ * 2. 「次の一手がある？」を表示
+ * 3. 「ある」を選択 → 次の一手を入力
+ * 4. このUseCaseを呼び出す
+ */
+final readonly class ContinueItemUseCase
 {
     public function __construct(
         private ItemRepositoryInterface $itemRepository,
     ) {}
 
     /**
-     * Item の nextAction を更新する
+     * Item の nextAction を更新してタスクを継続する
      *
      * @return bool 更新に成功したか（対象が存在したか）
      */
@@ -45,8 +54,8 @@ final readonly class UpdateNextActionUseCase
             dueAt: $item->dueAt,
             timebox: $item->timebox,
             meta: $item->meta,
-            lastPresentedAt: $item->lastPresentedAt,
-            doneAt: $item->doneAt,
+            lastPresentedAt: null, // 継続するので再度選定対象にする
+            doneAt: null, // 継続するので完了日時はクリア
             createdAt: $item->createdAt,
             updatedAt: $now,
             deletedAt: $item->deletedAt,
@@ -57,3 +66,4 @@ final readonly class UpdateNextActionUseCase
         return true;
     }
 }
+

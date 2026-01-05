@@ -10,6 +10,7 @@ use Domain\Limin\ValueObject\Availability;
 use Domain\Limin\ValueObject\ItemState;
 use Domain\Limin\ValueObject\ItemType;
 use Domain\Limin\ValueObject\NextAction;
+use Domain\Limin\ValueObject\Title;
 use Illuminate\Support\Str;
 
 final readonly class CaptureItemUseCase
@@ -20,6 +21,7 @@ final readonly class CaptureItemUseCase
 
     /**
      * 1行登録を実行する
+     * 入力テキストは title と next_action の両方に保存される
      *
      * @return string 作成されたItemのID
      */
@@ -34,6 +36,7 @@ final readonly class CaptureItemUseCase
             type: ItemType::TASK,
             state: ItemState::DO,
             availability: Availability::NOW,
+            title: Title::create($text),
             nextAction: NextAction::create($text),
             dueAt: null,
             timebox: null,

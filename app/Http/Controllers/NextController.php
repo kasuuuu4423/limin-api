@@ -36,7 +36,10 @@ final class NextController extends Controller
             return response()->noContent();
         }
 
-        return response()->json($this->formatItem($result->item, $result->isInterrupt));
+        return response()->json($this->formatItem(
+            $result->item,
+            $result->isInterrupt,
+        ));
     }
 
     /**
@@ -92,7 +95,8 @@ final class NextController extends Controller
     {
         $response = [
             'id' => $item->id,
-            'next_action' => $item->nextAction->value,
+            'title' => $item->title->value,
+            'next_action' => $item->nextAction?->value,
             'due_at' => $item->dueAt?->format(\DateTimeInterface::ATOM),
             'timebox' => $item->timebox,
             'type' => $item->type->value,

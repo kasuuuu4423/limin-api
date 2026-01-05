@@ -315,6 +315,13 @@
             margin-bottom: 0.5rem;
         }
 
+        .next-item-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--accent-blue);
+        }
+
         .session-info {
             display: flex;
             align-items: center;
@@ -440,6 +447,8 @@
                 <div class="card-body">
                     <div class="next-item-display hidden" id="nextItemDisplay">
                         <div class="interrupt-badge hidden" id="interruptBadge">締切割り込み</div>
+                        <div class="next-item-label">タスク名</div>
+                        <div class="next-item-title" id="nextItemTitle">-</div>
                         <div class="next-item-label">次の一手</div>
                         <div class="next-item-action" id="nextItemAction">-</div>
                         <div class="next-item-meta" id="nextItemMeta"></div>
@@ -488,23 +497,47 @@
                 </div>
             </div>
 
-            <!-- nextAction更新 -->
+            <!-- Phase 5: 完了 -->
             <div class="card">
                 <div class="card-header">
-                    <strong>nextAction更新</strong>
-                    <span class="endpoint">POST /item/{id}/next-action</span>
+                    <strong>完了・継続</strong>
+                    <span class="endpoint">POST /item/{id}/complete, /continue</span>
                 </div>
                 <div class="card-body">
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        タスク完了 or 次の一手を設定して継続
+                    </p>
                     <div class="form-group">
                         <label>Item ID</label>
-                        <input type="text" id="updateItemId" placeholder="UUID">
+                        <input type="text" id="completeItemId" placeholder="UUID">
                     </div>
                     <div class="form-group">
-                        <label>Next Action</label>
-                        <input type="text" id="nextAction" placeholder="まず目次だけ書く">
+                        <label>次の一手（継続の場合）</label>
+                        <input type="text" id="continueNextAction" placeholder="次にやること">
                     </div>
                     <div class="btn-group">
-                        <button class="btn btn-success" onclick="updateNextAction()">更新</button>
+                        <button class="btn btn-success" onclick="completeItem()">タスク完了</button>
+                        <button class="btn btn-primary" onclick="continueItem()">継続（次の一手を設定）</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 5: 先送り（今は無理） -->
+            <div class="card">
+                <div class="card-header">
+                    <strong>先送り（今は無理）</strong>
+                    <span class="endpoint">POST /item/{id}/defer</span>
+                </div>
+                <div class="card-body">
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        このItemについて今は気力がない → LATER に変更
+                    </p>
+                    <div class="form-group">
+                        <label>Item ID</label>
+                        <input type="text" id="deferItemId" placeholder="UUID">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="deferItem()">先送り</button>
                     </div>
                 </div>
             </div>
@@ -579,7 +612,8 @@
 
         function showNextItem(data) {
             const display = document.getElementById('nextItemDisplay');
-            const badge = document.getElementById('interruptBadge');
+            const interruptBadge = document.getElementById('interruptBadge');
+            const title = document.getElementById('nextItemTitle');
             const action = document.getElementById('nextItemAction');
             const meta = document.getElementById('nextItemMeta');
             const interruptActions = document.getElementById('interruptActions');
@@ -588,7 +622,8 @@
             isInterruptPending = data.is_interrupt === true;
 
             display.classList.remove('hidden', 'interrupt');
-            action.textContent = data.next_action;
+            title.textContent = data.title || '-';
+            action.textContent = data.next_action || '-';
 
             let metaText = [];
             if (data.type) metaText.push(`type: ${data.type}`);
@@ -598,14 +633,15 @@
 
             // Item IDをフォームに反映
             document.getElementById('deleteItemId').value = data.id;
-            document.getElementById('updateItemId').value = data.id;
+            document.getElementById('completeItemId').value = data.id;
+            document.getElementById('deferItemId').value = data.id;
 
             if (isInterruptPending) {
                 display.classList.add('interrupt');
-                badge.classList.remove('hidden');
+                interruptBadge.classList.remove('hidden');
                 interruptActions.classList.remove('hidden');
             } else {
-                badge.classList.add('hidden');
+                interruptBadge.classList.add('hidden');
                 interruptActions.classList.add('hidden');
             }
         }
@@ -836,7 +872,8 @@
 
                 if (data.id) {
                     document.getElementById('deleteItemId').value = data.id;
-                    document.getElementById('updateItemId').value = data.id;
+                    document.getElementById('completeItemId').value = data.id;
+                    document.getElementById('deferItemId').value = data.id;
                     document.getElementById('captureText').value = '';
                 }
             } catch (e) {
@@ -870,13 +907,74 @@
             }
         }
 
-        async function updateNextAction() {
-            const id = document.getElementById('updateItemId').value;
-            const nextAction = document.getElementById('nextAction').value;
+        async function completeItem() {
+            const id = document.getElementById('completeItemId').value;
 
             try {
                 await getCsrfCookie();
-                const res = await fetch(`/api/item/${id}/next-action`, {
+                const res = await fetch(`/api/item/${id}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-XSRF-TOKEN': getCsrfToken()
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (res.status === 204) {
+                    log('POST', `/api/item/${id}/complete`, res.status, 'Success - Item completed');
+                    hideNextItem();
+                } else {
+                    const data = await res.json();
+                    log('POST', `/api/item/${id}/complete`, res.status, data);
+                }
+            } catch (e) {
+                log('POST', `/api/item/${id}/complete`, 'ERROR', { error: e.message });
+            }
+        }
+
+        async function deferItem() {
+            const id = document.getElementById('deferItemId').value;
+
+            try {
+                await getCsrfCookie();
+                const res = await fetch(`/api/item/${id}/defer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-XSRF-TOKEN': getCsrfToken()
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (res.status === 204) {
+                    log('POST', `/api/item/${id}/defer`, res.status, 'Success - Item deferred to LATER');
+                    hideNextItem();
+                } else {
+                    const data = await res.json();
+                    log('POST', `/api/item/${id}/defer`, res.status, data);
+                }
+            } catch (e) {
+                log('POST', `/api/item/${id}/defer`, 'ERROR', { error: e.message });
+            }
+        }
+
+        async function continueItem() {
+            const id = document.getElementById('completeItemId').value;
+            const nextAction = document.getElementById('continueNextAction').value;
+
+            if (!nextAction) {
+                log('POST', `/api/item/${id}/continue`, 'ERROR', { error: 'Next action is required for continue' });
+                return;
+            }
+
+            try {
+                await getCsrfCookie();
+                const res = await fetch(`/api/item/${id}/continue`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -889,13 +987,15 @@
                 });
 
                 if (res.status === 204) {
-                    log('POST', `/api/item/${id}/next-action`, res.status, 'Success');
+                    log('POST', `/api/item/${id}/continue`, res.status, 'Success - Item continued with new action');
+                    document.getElementById('continueNextAction').value = '';
+                    hideNextItem();
                 } else {
                     const data = await res.json();
-                    log('POST', `/api/item/${id}/next-action`, res.status, data);
+                    log('POST', `/api/item/${id}/continue`, res.status, data);
                 }
             } catch (e) {
-                log('POST', `/api/item/${id}/next-action`, 'ERROR', { error: e.message });
+                log('POST', `/api/item/${id}/continue`, 'ERROR', { error: e.message });
             }
         }
     </script>

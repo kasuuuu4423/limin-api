@@ -8,6 +8,7 @@ use Domain\Limin\ValueObject\Availability;
 use Domain\Limin\ValueObject\ItemState;
 use Domain\Limin\ValueObject\ItemType;
 use Domain\Limin\ValueObject\NextAction;
+use Domain\Limin\ValueObject\Title;
 
 final class Item
 {
@@ -17,7 +18,8 @@ final class Item
         public readonly ItemType $type,
         public readonly ItemState $state,
         public readonly Availability $availability,
-        public readonly NextAction $nextAction,
+        public readonly Title $title,
+        public readonly ?NextAction $nextAction,
         public readonly ?\DateTimeImmutable $dueAt,
         public readonly ?int $timebox,
         public readonly bool $meta,
@@ -46,6 +48,11 @@ final class Item
     public function isActionable(): bool
     {
         return $this->state === ItemState::DO;
+    }
+
+    public function hasNextAction(): bool
+    {
+        return $this->nextAction !== null;
     }
 
     public function hasDeadlineWithin(int $hours): bool
